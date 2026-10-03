@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>■ 2ちゃんねる風 掲示板システム ■</title>
+    <!-- Google Fonts: ドットフォント (DotGothic16) -->
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #F8F9FA;
+            font-family: "DotGothic16", "MS PGothic", monospace;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="p-2 md:p-4 flex items-center justify-center min-h-screen">
+
+    <div class="max-w-4xl w-full mx-auto bg-white border-2 border-gray-500 p-4 shadow-md">
+        
+        <!-- ==================== 認証画面（ログイン） ==================== -->
+        <div id="auth-view" class="max-w-md mx-auto my-8 bg-white border border-gray-400 p-6 shadow-sm">
+            <h1 class="text-lg font-bold text-black mb-4 text-center border-b-2 border-black pb-2">
+                log in…
+            </h1>
+
+            <div class="space-y-4 text-sm">
+                <p class="text-xs text-gray-800 mb-2">IDとパスワードを入力しろかすぅー</p>
+                <div>
+                    <label class="block font-bold text-black mb-1">ID:</label>
+                    <input type="text" id="login-id" placeholder="???" class="w-full border border-gray-400 px-3 py-2 bg-white text-black">
+                </div>
+                <div>
+                    <label class="block font-bold text-black mb-1">passwd:</label>
+                    <div class="relative">
+                        <input type="password" id="login-pass" placeholder="???" class="w-full border border-gray-400 px-3 py-2 pr-10 bg-white text-black">
+                        <button type="button" id="toggle-login-pass" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-600 hover:text-black cursor-pointer">
+                            <svg id="login-pass-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button id="do-login-btn" class="w-full bg-gray-200 border border-gray-500 py-2 text-sm font-bold text-black hover:bg-gray-300 active:bg-gray-400 cursor-pointer shadow-sm mt-2">
+                    GOO
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== メイン掲示板画面 ==================== -->
+        <div id="main-app-view" class="hidden">
+            
+            <!-- 上部バー -->
+            <div class="mb-4 bg-gray-100 border border-gray-400 p-3 text-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-black">板選択：</span>
+                    <select id="board-select" class="border border-gray-400 px-2 py-1 bg-white font-bold text-black cursor-pointer text-xs">
+                        <!-- 動的に生成されます -->
+                    </select>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap w-full md:w-auto justify-between md:justify-end">
+                    <span id="user-info-display" class="text-xs font-bold text-black truncate max-w-[220px] md:max-w-none"></span>
+                    <button id="logout-btn" class="bg-gray-200 border border-gray-500 px-2.5 py-1 text-xs font-bold text-black hover:bg-gray-300 cursor-pointer">
+                        ログアウト
+                    </button>
+                </div>
+            </div>
+
+            <!-- スレッド一覧画面 -->
+            <div id="thread-list-view">
+                <div class="flex justify-between items-center mb-4 border-b-2 border-black pb-2">
+                    <h1 class="text-base md:text-lg font-bold text-black">
+                        <span id="board-title-text">■ スレッド一覧 ■</span>
+                    </h1>
+                </div>
+
+                <!-- 新規スレッド作成フォーム -->
+                <div class="bg-gray-50 border border-gray-400 p-3.5 mb-6 text-sm space-y-3">
+                    <div class="font-bold text-black border-b border-gray-300 pb-1">■ 新規スレッド作成</div>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                        <label class="w-32 font-bold text-black text-xs">スレッドタイトル:</label>
+                        <input type="text" id="new-thread-title" placeholder="例：〇〇について語るスレッド" class="border border-gray-400 px-2 py-1 flex-1 w-full text-xs bg-white text-black">
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                        <label class="w-32 font-bold text-black text-xs">スレッドPW(任意):</label>
+                        <div class="relative flex-1 w-full">
+                            <input type="password" id="new-thread-pass" placeholder="パスワード（なしなら空欄）" class="border border-gray-400 px-2 py-1 w-full text-xs pr-10 bg-white text-black">
+                            <button type="button" id="toggle-new-thread-pass" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-600 hover:text-black cursor-pointer">
+                                <svg id="new-thread-pass-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-start gap-2">
+                        <label class="w-32 font-bold text-black text-xs pt-1">最初の本文(1レス目):</label>
+                        <textarea id="new-thread-message" rows="2" placeholder="スレッドの最初のメッセージを入力..." class="border border-gray-400 px-2 py-1 flex-1 w-full text-xs resize-none bg-white text-black focus:outline-none"></textarea>
+                    </div>
+                    <div class="flex justify-end pt-1">
+                        <button id="create-thread-btn" class="bg-gray-200 border border-gray-500 px-5 py-1.5 text-xs font-bold text-black hover:bg-gray-300 active:bg-gray-400 cursor-pointer shadow-sm">
+                            スレッドを立てる
+                        </button>
+                    </div>
+                </div>
+
+                <!-- スレッド一覧リスト -->
+                <div class="font-bold text-black mb-2 text-xs">【スレッド一覧（レス数順）】</div>
+                <div id="threads-container" class="space-y-2 min-h-[200px] border border-gray-300 p-3 bg-white"></div>
+            </div>
+
+            <!-- スレッド詳細・チャット画面 -->
+            <div id="thread-detail-view" class="hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b-2 border-black pb-2 gap-2">
+                    <h1 id="active-thread-title" class="text-base md:text-lg font-bold text-black"></h1>
+                    <button id="back-to-list-btn" class="bg-gray-200 border border-gray-500 px-3 py-1 text-xs font-bold text-black hover:bg-gray-300 cursor-pointer shadow-sm">
+                        &laquo; スレッド一覧に戻る
+                    </button>
+                </div>
+
+                <!-- レス一覧表示エリア -->
+                <div id="chat-container" class="space-y-3 mb-2 min-h-[300px] max-h-[450px] overflow-y-auto border border-gray-300 p-3 bg-white text-xs"></div>
+                
+                <!-- 入力中表示エリア -->
+                <div id="typing-indicator" class="text-xs text-gray-600 h-5 mb-2 font-bold px-1"></div>
+
+                <!-- 投稿フォーム -->
+                <div class="bg-gray-50 border border-gray-400 p-3 text-sm space-y-2">
+                    <div class="flex items-start gap-2">
+                        <label class="w-14 font-bold text-black text-xs pt-1">本文:</label>
+                        <textarea id="message-input" rows="3" placeholder="ここにメッセージを入力..." class="border border-gray-400 px-2 py-1 flex-1 text-xs resize-none bg-white text-black focus:outline-none"></textarea>
+                    </div>
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <span id="posting-as" class="text-xs text-black font-bold truncate max-w-[250px]"></span>
+                        <button id="send-btn" class="bg-gray-200 border border-gray-500 px-5 py-1.5 text-xs font-bold text-black hover:bg-gray-300 active:bg-gray-400 cursor-pointer shadow-sm">
+                            書き込む
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ==================== スレッドパスワード入力モーダル ==================== -->
+    <div id="thread-pass-modal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white border-2 border-black max-w-sm w-full p-4 shadow-lg text-sm relative">
+            <div class="flex justify-between items-center border-b-2 border-black pb-2 mb-3">
+                <button id="close-pass-modal-btn" class="bg-gray-200 border border-gray-400 px-2 py-0.5 text-xs font-bold text-black hover:bg-gray-300 cursor-pointer">
+                    &laquo; 戻る
+                </button>
+                <h2 class="text-sm font-bold text-black">パスワード認証</h2>
+                <div class="w-10"></div>
+            </div>
+            <p class="text-xs text-black mb-3">このスレッドにはパスワードが設定されています。</p>
+            <div class="mb-3">
+                <label class="block font-bold text-black mb-1 text-xs">passwd:</label>
+                <div class="relative">
+                    <input type="password" id="enter-thread-pass" placeholder="パスワードを入力" class="w-full border border-gray-400 px-3 py-1.5 text-xs pr-10 bg-white text-black">
+                    <button type="button" id="toggle-thread-pass" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-600 hover:text-black cursor-pointer">
+                        <svg id="thread-pass-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <button id="submit-thread-pass-btn" class="w-full bg-gray-200 border border-gray-500 py-1.5 text-xs font-bold text-black hover:bg-gray-300 cursor-pointer shadow-sm">
+                スレッドに入る
+            </button>
+        </div>
+    </div>
+
+    <!-- Firebase & ロジック -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getDatabase, ref, push, set, update, remove, onValue, off, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyAm3rUD0n-7b9syhIKmgp0FLVjiduEk8KY",
+          authDomain: "chat-d8eb0.firebaseapp.com",
+          databaseURL: "https://chat-d8eb0-default-rtdb.firebaseio.com",
+          projectId: "chat-d8eb0",
+          storageBucket: "chat-d8eb0.firebasestorage.app",
+          messagingSenderId: "1072576882638",
+          appId: "1:1072576882638:web:b47c85ba653915891dad9f",
+          measurementId: "G-PYFR9KS2ZJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+
+        const authView = document.getElementById('auth-view');
+        const mainAppView = document.getElementById('main-app-view');
+        const loginIdInput = document.getElementById('login-id');
+        const loginPassInput = document.getElementById('login-pass');
+        const doLoginBtn = document.getElementById('do-login-btn');
+
+        const userInfoDisplay = document.getElementById('user-info-display');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        const boardSelect = document.getElementById('board-select');
+        const boardTitleText = document.getElementById('board-title-text');
+        const threadListView = document.getElementById('thread-list-view');
+        const threadDetailView = document.getElementById('thread-detail-view');
+        const threadsContainer = document.getElementById('threads-container');
+        const backToListBtn = document.getElementById('back-to-list-btn');
+
+        const newThreadTitleInput = document.getElementById('new-thread-title');
+        const newThreadPassInput = document.getElementById('new-thread-pass');
+        const newThreadMessageInput = document.getElementById('new-thread-message');
+        const createThreadBtn = document.getElementById('create-thread-btn');
+
+        const activeThreadTitle = document.getElementById('active-thread-title');
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const postingAs = document.getElementById('posting-as');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        const threadPassModal = document.getElementById('thread-pass-modal');
+        const enterThreadPass = document.getElementById('enter-thread-pass');
+        const submitThreadPassBtn = document.getElementById('submit-thread-pass-btn');
+        const closePassModalBtn = document.getElementById('close-pass-modal-btn');
+        let pendingThreadData = null;
+
+        let currentUser = null;
+        let currentBoardId = 'zatudan';
+        let currentThreadId = null;
+        let messagesRef = null;
+        let typingRef = null;
+
+        let lastSendTime = 0;
+        let rapidSendCount = 0;
+        let isSending = false;
+        let lastThreadCreateTime = 0;
+        let lastTypingTime = 0;
+
+        let threadListTimer = null;
+        let threadDetailTimer = null;
+
+        async function initDefaultData() {
+            const boardsMetaRef = ref(db, 'board_meta');
+            const snap = await get(boardsMetaRef);
+            if (!snap.exists()) {
+                await set(ref(db, 'board_meta/zatudan'), { name: '雑談板' });
+                await set(ref(db, 'board_meta/news'), { name: 'ニュース速報板' });
+                await set(ref(db, 'board_meta/any'), { name: 'なんでもあり' });
+            }
+        }
+        initDefaultData();
+
+        function setupPasswordToggle(inputId, toggleBtnId, iconId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(toggleBtnId);
+            const icon = document.getElementById(iconId);
+
+            const eyeOpenSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
+            const eyeClosedSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>`;
+
+            btn.addEventListener('click', () => {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.innerHTML = eyeOpenSvg;
+                } else {
+                    input.type = 'password';
+                    icon.innerHTML = eyeClosedSvg;
+                }
+            });
+        }
+        setupPasswordToggle('login-pass', 'toggle-login-pass', 'login-pass-icon');
+        setupPasswordToggle('enter-thread-pass', 'toggle-thread-pass', 'thread-pass-icon');
+        setupPasswordToggle('new-thread-pass', 'toggle-new-thread-pass', 'new-thread-pass-icon');
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return "";
+            const dateObj = new Date(timestamp);
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const h = String(dateObj.getHours()).padStart(2, '0');
+            const min = String(dateObj.getMinutes()).padStart(2, '0');
+            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
+            return `${y}/${m}/${d}(${dayOfWeek}) ${h}:${min}`;
+        }
+
+        function formatDisplayId(id, customTitle) {
+            if (customTitle && customTitle.trim() !== "") {
+                return `${id}. ${customTitle.trim()}`;
+            }
+            return id;
+        }
+
+        doLoginBtn.addEventListener('click', async () => {
+            try {
+                const id = loginIdInput.value.trim();
+                const pass = loginPassInput.value.trim();
+
+                if (!id || !pass) {
+                    alert("IDとパスワードを入力してください。");
+                    return;
+                }
+
+                const idRef = ref(db, `id_registry/${id}`);
+                const snapshot = await get(idRef);
+
+                if (!snapshot.exists()) {
+                    alert("エラー：指定されたIDは登録されていません。");
+                    return;
+                }
+
+                const data = snapshot.val();
+                if (data.banned) {
+                    alert("エラー：このアカウントは停止（BAN）されています。");
+                    return;
+                }
+
+                if (data.password !== pass) {
+                    alert("エラー：パスワードが間違っています。");
+                    return;
+                }
+
+                const userName = (data && data.name) ? data.name : id;
+                currentUser = { 
+                    name: userName, 
+                    id: id, 
+                    customTitle: data.customTitle || '',
+                    violationCount: data.violationCount || 0 
+                };
+                enterApp();
+            } catch (e) {
+                alert("【ログインエラー】\n" + e.message);
+            }
+        });
+
+        function enterApp() {
+            updateUserDisplay();
+            authView.classList.add('hidden');
+            mainAppView.classList.remove('hidden');
+
+            loadBoardSelectOptions();
+            showThreadListView();
+        }
+
+        function updateUserDisplay() {
+            const idDisplay = formatDisplayId(currentUser.id, currentUser.customTitle);
+            userInfoDisplay.textContent = `ログイン中: ${currentUser.name} (ID: ${idDisplay})`;
+            postingAs.textContent = `投稿者: ${currentUser.name} (ID: ${idDisplay})`;
+        }
+
+        logoutBtn.addEventListener('click', () => {
+            if (!confirm("本当にログアウトしますか？")) return;
+            currentUser = null;
+            loginIdInput.value = '';
+            loginPassInput.value = '';
+            clearAllIntervals();
+            mainAppView.classList.add('hidden');
+            authView.classList.remove('hidden');
+        });
+
+        function clearAllIntervals() {
+            if (threadListTimer) clearInterval(threadListTimer);
+            if (threadDetailTimer) clearInterval(threadDetailTimer);
+        }
+
+        function loadBoardSelectOptions() {
+            const boardMetaRef = ref(db, 'board_meta');
+            onValue(boardMetaRef, (snapshot) => {
+                boardSelect.innerHTML = '';
+
+                const boards = snapshot.val();
+                if (boards) {
+                    const boardKeys = Object.keys(boards);
+                    boardKeys.forEach(bId => {
+                        const bName = boards[bId].name || bId;
+                        const opt = document.createElement('option');
+                        opt.value = bId;
+                        opt.textContent = bName;
+                        boardSelect.appendChild(opt);
+                    });
+
+                    if (!boards[currentBoardId] && boardKeys.length > 0) {
+                        currentBoardId = boardKeys[0];
+                    }
+                }
+
+                boardSelect.value = currentBoardId;
+            }, { onlyOnce: true });
+        }
+
+        function showThreadListView() {
+            clearAllIntervals();
+            threadListView.classList.remove('hidden');
+            threadDetailView.classList.add('hidden');
+            if (messagesRef) off(messagesRef);
+            if (typingRef) off(typingRef);
+            currentThreadId = null;
+            typingIndicator.textContent = '';
+
+            loadThreads(currentBoardId);
+
+            threadListTimer = setInterval(() => {
+                if (!threadListView.classList.contains('hidden')) {
+                    loadThreads(currentBoardId);
+                }
+            }, 2000);
+        }
+
+        async function openThread(threadId, title, threadPassword) {
+            if (threadPassword && threadPassword.trim() !== "") {
+                pendingThreadData = { threadId, title, password: threadPassword };
+                enterThreadPass.value = '';
+                threadPassModal.classList.remove('hidden');
+                return;
+            }
+            await proceedOpenThread(threadId, title);
+        }
+
+        async function proceedOpenThread(threadId, title) {
+            clearAllIntervals();
+            threadListView.classList.add('hidden');
+            threadDetailView.classList.remove('hidden');
+            activeThreadTitle.textContent = `■ ${title} ■`;
+            currentThreadId = threadId;
+
+            loadThreadMessages(threadId);
+
+            threadDetailTimer = setInterval(() => {
+                if (!threadDetailView.classList.contains('hidden') && currentThreadId) {
+                    loadThreadMessages(currentThreadId, true);
+                }
+            }, 5000);
+        }
+
+        async function loadThreadMessages(threadId, isSilent = false) {
+            try {
+                const snap = await get(ref(db, `boards/${currentBoardId}/threads/${threadId}/messages`));
+                chatContainer.innerHTML = '';
+                if (!snap.exists()) {
+                    chatContainer.innerHTML = '<div class="text-black text-xs">メッセージはまだありません。</div>';
+                    return;
+                }
+
+                const messages = snap.val();
+                let resCount = 0;
+
+                Object.keys(messages).forEach(msgId => {
+                    resCount++;
+                    const data = messages[msgId];
+                    if (!data) return;
+
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = "animate-fade border-b border-gray-200 pb-2.5 mb-2.5 relative text-xs";
+
+                    const timeStr = formatDate(data.createdAt);
+                    const name = escapeHtml(data.username || "名無しさん");
+                    const userIdDisp = data.userId ? ` ID:${escapeHtml(formatDisplayId(data.userId, data.customTitle))}` : '';
+                    const text = escapeHtml(data.text || "").replace(/\n/g, '<br>');
+
+                    msgDiv.innerHTML = `
+                        <div class="mb-1 flex items-center justify-between flex-wrap gap-1">
+                            <div class="flex items-center gap-1 flex-wrap">
+                                <span class="font-bold">${resCount}</span> ：
+                                <span class="font-bold text-black">${name}</span> ：
+                                <span class="text-gray-600">${timeStr}</span>
+                                <span class="text-gray-700 font-mono">${userIdDisp}</span>
+                            </div>
+                        </div>
+                        <div class="pl-4 text-black whitespace-pre-wrap leading-relaxed">${text}</div>
+                    `;
+
+                    chatContainer.appendChild(msgDiv);
+                });
+
+                if (!isSilent) {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+
+                if (typingRef) off(typingRef);
+                typingRef = ref(db, `boards/${currentBoardId}/threads/${threadId}/typing`);
+                onValue(typingRef, (snapshot) => {
+                    const typingData = snapshot.val();
+                    if (!typingData) {
+                        typingIndicator.textContent = '';
+                        return;
+                    }
+                    const now = Date.now();
+                    const activeTypers = [];
+                    Object.keys(typingData).forEach(uid => {
+                        if (currentUser && uid === currentUser.id) return;
+                        const info = typingData[uid];
+                        if (info && (now - info.timestamp < 4000)) {
+                            activeTypers.push(info.name);
+                        }
+                    });
+
+                    if (activeTypers.length > 0) {
+                        typingIndicator.textContent = `${activeTypers.join(', ')}さんが入力中...`;
+                    } else {
+                        typingIndicator.textContent = '';
+                    }
+                });
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        messageInput.addEventListener('input', () => {
+            if (!currentThreadId || !currentUser) return;
+            const now = Date.now();
+            if (now - lastTypingTime > 1500) {
+                lastTypingTime = now;
+                set(ref(db, `boards/${currentBoardId}/threads/${currentThreadId}/typing/${currentUser.id}`), {
+                    name: currentUser.name,
+                    timestamp: now
+                }).catch(() => {});
+            }
+        });
+
+        closePassModalBtn.addEventListener('click', () => {
+            threadPassModal.classList.add('hidden');
+            pendingThreadData = null;
+        });
+
+        submitThreadPassBtn.addEventListener('click', () => {
+            if (!pendingThreadData) return;
+            const inputPass = enterThreadPass.value.trim();
+            if (inputPass === pendingThreadData.password) {
+                threadPassModal.classList.add('hidden');
+                const data = pendingThreadData;
+                pendingThreadData = null;
+                proceedOpenThread(data.threadId, data.title);
+            } else {
+                alert("パスワードが間違っています。");
+            }
+        });
+
+        async function loadThreads(boardId) {
+            let boardName = "スレッド一覧";
+            const metaSnap = await get(ref(db, `board_meta/${boardId}`));
+            if (metaSnap.exists()) {
+                boardName = metaSnap.val().name || boardId;
+            }
+            boardTitleText.textContent = `■ ${boardName} スレッド一覧 ■`;
+
+            try {
+                const snapshot = await get(ref(db, `boards/${boardId}/threads`));
+                threadsContainer.innerHTML = '';
+                const data = snapshot.val();
+
+                if (!data) {
+                    threadsContainer.innerHTML = '<div class="text-black text-xs">スレッドがまだありません。上のフォームから作成してください。</div>';
+                    return;
+                }
+
+                let threadArray = Object.keys(data).map(tId => ({ id: tId, boardId: boardId, ...data[tId] }));
+
+                threadArray.sort((a, b) => {
+                    const countA = a.messages ? Object.keys(a.messages).length : 0;
+                    const countB = b.messages ? Object.keys(b.messages).length : 0;
+                    return countB - countA;
+                });
+
+                renderThreadList(threadArray);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderThreadList(threadArray) {
+            threadsContainer.innerHTML = '';
+            threadArray.forEach((thread) => {
+                const threadId = thread.id;
+                const targetBoardId = thread.boardId || currentBoardId;
+                const title = thread.title || "無題のスレッド";
+                const threadPassword = thread.password || "";
+                const messagesCount = thread.messages ? Object.keys(thread.messages).length : 0;
+                const creator = escapeHtml(thread.creator || "名無しさん");
+                const dateStr = formatDate(thread.createdAt);
+                const lockIcon = (threadPassword !== "") ? `<span class="text-black font-bold mr-1">🔒[PW付]</span>` : '';
+
+                const threadDiv = document.createElement('div');
+                threadDiv.className = "animate-fade bg-white border border-gray-300 p-2 text-xs flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-50 cursor-pointer shadow-sm gap-2";
+                threadDiv.innerHTML = `
+                    <div class="flex-1 w-full truncate">
+                        ${lockIcon}<span class="font-bold text-black">${escapeHtml(title)}</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-gray-700 whitespace-nowrap flex-wrap">
+                        <span>作成者: <strong class="text-black">${creator}</strong></span>
+                        <span class="hidden sm:inline">${dateStr}</span>
+                        <span class="bg-gray-100 border border-gray-300 px-2 py-0.5 text-black font-bold">レス: ${messagesCount}</span>
+                    </div>
+                `;
+
+                threadDiv.addEventListener('click', () => {
+                    currentBoardId = targetBoardId;
+                    boardSelect.value = targetBoardId;
+                    openThread(threadId, title, threadPassword);
+                });
+
+                threadsContainer.appendChild(threadDiv);
+            });
+        }
+
+        async function checkSpamAndExecute() {
+            const now = Date.now();
+            
+            if (isSending) {
+                alert("送信中...");
+                throw new Error("STILL_SENDING");
+            }
+
+            if (lastSendTime && (now - lastSendTime < 3000)) {
+                rapidSendCount++;
+            } else {
+                rapidSendCount = 1;
+            }
+            lastSendTime = now;
+
+            if (rapidSendCount >= 20) {
+                rapidSendCount = 0; 
+                currentUser.violationCount = (currentUser.violationCount || 0) + 1;
+
+                const isBanned = currentUser.violationCount >= 10;
+                const timeoutUntilTime = now + 60000;
+
+                await update(ref(db, `id_registry/${currentUser.id}`), {
+                    violationCount: currentUser.violationCount,
+                    banned: isBanned,
+                    timeoutUntil: timeoutUntilTime
+                });
+
+                currentUser.timeoutUntil = timeoutUntilTime;
+
+                if (currentThreadId) {
+                    const spamMsgRef = ref(db, `boards/${currentBoardId}/threads/${currentThreadId}/messages`);
+                    await push(spamMsgRef, {
+                        username: "【運営システム】",
+                        text: `${currentUser.name}のアカウントは1分間タイムアウトされました 理由:スパム`,
+                        userId: "SYSTEM",
+                        createdAt: Date.now()
+                    });
+                }
+
+                if (isBanned) {
+                    alert(`【アカウント停止】\n制限を超えたため、アカウントが停止されました。`);
+                    logoutBtn.click();
+                    throw new Error("ACCOUNT_BANNED");
+                } else {
+                    alert(`【スパム検知】\n連続送信が検知されたため、1分間タイムアウトされました。`);
+                    throw new Error("ACCOUNT_TIMEOUT");
+                }
+            }
+
+            if (currentUser.timeoutUntil && now < currentUser.timeoutUntil) {
+                const remainSec = Math.ceil((currentUser.timeoutUntil - now) / 1000);
+                alert(`タイムアウト中です。あと ${remainSec} 秒お待ちください。`);
+                throw new Error("STILL_TIMEOUT");
+            }
+        }
+
+        createThreadBtn.addEventListener('click', async () => {
+            try {
+                const selectedBoard = boardSelect.value;
+                if (!selectedBoard) {
+                    alert("板が選択されていません。上部のメニューから板を選択してください。");
+                    return;
+                }
+                currentBoardId = selectedBoard;
+
+                const now = Date.now();
+                if (lastThreadCreateTime && (now - lastThreadCreateTime < 60000)) {
+                    const remainSec = Math.ceil((60000 - (now - lastThreadCreateTime)) / 1000);
+                    alert(`スレッドを作成してから1分間は新しいスレッドを作成できません。あと ${remainSec} 秒お待ちください。`);
+                    return;
+                }
+
+                const title = newThreadTitleInput.value.trim();
+                const threadPass = newThreadPassInput.value.trim();
+                const message = newThreadMessageInput.value.trim();
+
+                if (!title) {
+                    alert("スレッドタイトルを入力してください。");
+                    return;
+                }
+                if (!message) {
+                    alert("最初の本文を入力してください。");
+                    return;
+                }
+
+                await checkSpamAndExecute();
+
+                lastThreadCreateTime = Date.now();
+
+                const userName = (currentUser && currentUser.name) ? currentUser.name : "名無しさん";
+                const userId = (currentUser && currentUser.id) ? currentUser.id : "unknown";
+                const nowTime = Date.now();
+
+                const newThreadRef = push(ref(db, `boards/${currentBoardId}/threads`));
+                const threadId = newThreadRef.key;
+
+                await set(ref(db, `boards/${currentBoardId}/threads/${threadId}`), {
+                    title: title,
+                    password: threadPass,
+                    creator: userName,
+                    creatorId: userId,
+                    createdAt: nowTime,
+                    messages: {
+                        [push(ref(db, `boards/${currentBoardId}/threads/${threadId}/messages`)).key]: {
+                            username: userName,
+                            text: message,
+                            userId: userId,
+                            customTitle: currentUser.customTitle || '',
+                            createdAt: nowTime
+                        }
+                    }
+                });
+
+                newThreadTitleInput.value = '';
+                newThreadPassInput.value = '';
+                newThreadMessageInput.value = '';
+                proceedOpenThread(threadId, title);
+
+            } catch (e) {
+                if (e.message !== "ACCOUNT_TIMEOUT" && e.message !== "STILL_TIMEOUT" && e.message !== "ACCOUNT_BANNED" && e.message !== "STILL_SENDING") {
+                    alert("【スレッド作成エラー】\n" + e.message);
+                }
+            }
+        });
+
+        async function sendMessage() {
+            try {
+                const message = messageInput.value.trim();
+                if (!message || !currentThreadId) return;
+
+                await checkSpamAndExecute();
+
+                isSending = true;
+                sendBtn.textContent = "送信中...";
+                sendBtn.disabled = true;
+
+                await remove(ref(db, `boards/${currentBoardId}/threads/${currentThreadId}/typing/${currentUser.id}`)).catch(()=>{});
+
+                const userName = (currentUser && currentUser.name) ? currentUser.name : "名無しさん";
+                const userId = (currentUser && currentUser.id) ? currentUser.id : "unknown";
+
+                const msgRef = ref(db, `boards/${currentBoardId}/threads/${currentThreadId}/messages`);
+                await push(msgRef, {
+                    username: userName,
+                    text: message,
+                    userId: userId,
+                    customTitle: currentUser.customTitle || '',
+                    createdAt: Date.now()
+                });
+                messageInput.value = "";
+                messageInput.focus();
+
+                loadThreadMessages(currentThreadId);
+
+                setTimeout(() => {
+                    isSending = false;
+                    sendBtn.textContent = "書き込む";
+                    sendBtn.disabled = false;
+                }, 1000);
+
+            } catch (e) {
+                isSending = false;
+                sendBtn.textContent = "書き込む";
+                sendBtn.disabled = false;
+
+                if (e.message !== "ACCOUNT_TIMEOUT" && e.message !== "STILL_TIMEOUT" && e.message !== "ACCOUNT_BANNED" && e.message !== "STILL_SENDING") {
+                    alert("【書き込みエラー】\n" + e.message);
+                }
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        boardSelect.addEventListener('change', (e) => {
+            currentBoardId = e.target.value;
+            showThreadListView();
+        });
+
+        backToListBtn.addEventListener('click', showThreadListView);
+    </script>
+</body>
+</html>
